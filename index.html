@@ -1,1 +1,361 @@
-a
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Özel Gün Kutlaması</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #ff4081;
+            --secondary: #7c4dff;
+            --bg: #121212;
+            --card-bg: #1e1e1e;
+            --text: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* Arkaplan Animasyonu */
+        .bg-gradient {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(45deg, #121212, #2c003e, #001233);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            z-index: -1;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            margin-top: 50px;
+            text-align: center;
+            padding-bottom: 50px;
+        }
+
+        /* Bölümlerin Görünürlüğü */
+        .section { display: none; animation: fadeIn 0.8s ease; }
+        .section.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Kartlar */
+        .card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        h1 { font-size: 2.5rem; margin-bottom: 20px; background: -webkit-linear-gradient(var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { margin-bottom: 15px; }
+
+        /* Form Elemanları */
+        input, select, textarea {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: 1px solid #444;
+            background: #2b2b2b;
+            color: white;
+            font-size: 1rem;
+        }
+
+        button {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        button:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 64, 129, 0.6); }
+        button.secondary { background: #444; }
+
+        /* Önizleme Alanı */
+        .preview-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px; }
+        .preview-item { background: #252525; padding: 15px; border-radius: 15px; cursor: pointer; transition: 0.3s; }
+        .preview-item:hover { transform: translateY(-5px); background: #333; }
+
+        /* Kutlama Sayfası */
+        .celebration-photo {
+            width: 250px;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 5px solid var(--primary);
+            box-shadow: 0 0 30px var(--primary);
+            margin: 20px auto;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 64, 129, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 64, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 64, 129, 0); } }
+
+        .celebration-text { font-size: 1.2rem; line-height: 1.6; color: #ddd; margin: 20px 0; }
+        
+        .share-link-box {
+            background: #333;
+            padding: 15px;
+            border-radius: 10px;
+            word-break: break-all;
+            margin-top: 20px;
+            font-family: monospace;
+            user-select: all;
+        }
+        
+        .copy-hint { font-size: 0.8rem; color: #aaa; margin-top: 5px; }
+
+        /* Gizli uyarı */
+        .warning { color: #ffeb3b; font-size: 0.9rem; margin-top: 5px; display: none; }
+
+    </style>
+</head>
+<body>
+
+    <div class="bg-gradient"></div>
+
+    <div class="container">
+
+        <div id="home-screen" class="section active">
+            <h1>Özel Gün Kutlamaları</h1>
+            <p>Sevdiklerinize unutulmaz, dijital bir anı bırakın.</p>
+            
+            <div class="card" style="margin-top: 30px;">
+                <h2>Yeni Bir Kutlama Başlat</h2>
+                <p>Kendi özel sayfanızı oluşturmak için hemen bir kod satın alın.</p>
+                <button onclick="window.open('https://www.shopier.com/SizinMagazaLinkiniz', '_blank')">🛒 Satın Al (Shopier)</button>
+                <div style="margin: 20px 0; border-top: 1px solid #444;"></div>
+                <input type="text" id="access-code" placeholder="Satın aldığınız kodu giriniz...">
+                <button onclick="checkCode()">Kodu Onayla ve Başla</button>
+                <p id="code-error" style="color:red; display:none; margin-top:10px;">Geçersiz Kod!</p>
+            </div>
+
+            <h3>Son Oluşturulanlar (Örnek)</h3>
+            <div class="preview-list">
+                <div class="preview-item">🎂 Ahmet'in Doğum Günü</div>
+                <div class="preview-item">💍 Ayşe & Mehmet Yıldönümü</div>
+                <div class="preview-item">🎓 Mezuniyet Partisi</div>
+            </div>
+        </div>
+
+        <div id="create-screen" class="section">
+            <h1>Kutlamanı Tasarla</h1>
+            <div class="card">
+                <label>Kategori</label>
+                <select id="cel-type">
+                    <option value="birthday">Doğum Günü 🎂</option>
+                    <option value="anniversary">Yıl Dönümü 💍</option>
+                    <option value="love">Sevgililer Günü ❤️</option>
+                    <option value="mother">Anneler Günü 💐</option>
+                    <option value="father">Babalar Günü 👔</option>
+                    <option value="newjob">Yeni İş Tebriği 💼</option>
+                </select>
+
+                <label>Kutlanacak Kişinin Adı Soyadı</label>
+                <input type="text" id="cel-name" placeholder="Örn: Ayşe Yılmaz">
+
+                <label>Fotoğraf URL (İsteğe Bağlı)</label>
+                <input type="text" id="cel-photo" placeholder="https://ornek.com/foto.jpg (Boş bırakılırsa varsayılan kullanılır)">
+                <small style="color:#888;">Not: Hızlı resim yükleme sitelerinden aldığınız "Doğrudan Bağlantı"yı yapıştırın.</small>
+
+                <label>Mesajınız</label>
+                <textarea id="cel-msg" rows="4" placeholder="Duygularınızı buraya yazın..."></textarea>
+
+                <button onclick="publishCelebration()">🚀 Kutlamayı Yayınla</button>
+            </div>
+        </div>
+
+        <div id="success-screen" class="section">
+            <h1>🎉 Hazır!</h1>
+            <div class="card">
+                <p>Kutlama sayfan başarıyla oluşturuldu.</p>
+                <p>Aşağıdaki linki kopyalayıp sevdiklerinle paylaşabilirsin.</p>
+                
+                <div class="share-link-box" id="final-link"></div>
+                <p class="copy-hint">Linki kopyalamak için üzerine tıkla.</p>
+
+                <button onclick="goToCelebration()" class="secondary">Sayfaya Git ve Gör</button>
+            </div>
+        </div>
+
+        <div id="celebration-display" class="section">
+            <h1 id="display-title"></h1>
+            <img id="display-photo" class="celebration-photo" src="" alt="Kutlama Fotosu">
+            <div class="card">
+                <h2 id="display-name"></h2>
+                <p id="display-msg" class="celebration-text"></p>
+            </div>
+            <button onclick="startConfetti()">🎉 Tekrar Konfeti Patlat</button>
+            <br><br>
+            <a href="index.html" style="color:#888; text-decoration:none;">Yeni Kutlama Oluştur</a>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. AYARLAR VE DEĞİŞKENLER ---
+        // Geçerli kodları buraya tanımlıyoruz (Backend olmadığı için).
+        // Gerçekte bu veritabanında olurdu.
+        const validCodes = ['KOD2024', 'OZELGUN', 'ADMIN', 'SEVGI2025'];
+        
+        // URL Parametre Kontrolü (Sayfa açılınca)
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const type = urlParams.get('type');
+            
+            if (type) {
+                // Eğer URL'de veri varsa, direkt kutlama modunu aç
+                showCelebrationMode(urlParams);
+            } else {
+                // Yoksa ana sayfayı göster
+                switchSection('home-screen');
+            }
+        };
+
+        // --- 2. FONKSİYONLAR ---
+
+        function switchSection(id) {
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function checkCode() {
+            const codeInput = document.getElementById('access-code').value.trim();
+            const errorMsg = document.getElementById('code-error');
+
+            if (validCodes.includes(codeInput)) {
+                // Kod doğru
+                errorMsg.style.display = 'none';
+                switchSection('create-screen');
+            } else {
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        function publishCelebration() {
+            const type = document.getElementById('cel-type').value;
+            const name = document.getElementById('cel-name').value;
+            let photo = document.getElementById('cel-photo').value;
+            const msg = document.getElementById('cel-msg').value;
+
+            if (!name || !msg) {
+                alert("Lütfen isim ve mesaj alanlarını doldurunuz.");
+                return;
+            }
+
+            // Uyarı Penceresi
+            if (!confirm("⚠️ UYARI: Yayınla butonuna bastıktan sonra bilgiler değiştirilemez ve geri alınamaz.\n\nBilgileri kontrol ettiniz mi?")) {
+                return;
+            }
+
+            // Varsayılan fotoğraf ataması
+            if (!photo) {
+                photo = "https://cdn-icons-png.flaticon.com/512/4213/4213651.png"; // Pasta ikonu
+                if(type === 'love') photo = "https://cdn-icons-png.flaticon.com/512/2107/2107952.png";
+                if(type === 'anniversary') photo = "https://cdn-icons-png.flaticon.com/512/4007/4007399.png";
+            }
+
+            // URL Oluşturma (Veriyi URL'ye kodluyoruz)
+            const baseUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            const params = new URLSearchParams({
+                type: type,
+                name: name,
+                photo: photo,
+                msg: msg
+            });
+
+            const finalUrl = `${baseUrl}?${params.toString()}`;
+            
+            // Linki ekrana bas
+            document.getElementById('final-link').innerText = finalUrl;
+            switchSection('success-screen');
+        }
+
+        function goToCelebration() {
+            const link = document.getElementById('final-link').innerText;
+            window.location.href = link;
+        }
+
+        function showCelebrationMode(params) {
+            switchSection('celebration-display');
+            
+            const type = params.get('type');
+            const name = params.get('name');
+            const photo = params.get('photo');
+            const msg = params.get('msg');
+
+            // Başlıkları ayarla
+            let title = "İyi ki Doğdun!";
+            if(type === 'anniversary') title = "Mutlu Yıllar!";
+            if(type === 'love') title = "Seni Seviyorum!";
+            if(type === 'mother') title = "Anneler Günün Kutlu Olsun!";
+            if(type === 'father') title = "Babalar Günün Kutlu Olsun!";
+            if(type === 'newjob') title = "Yeni İşinde Başarılar!";
+
+            document.getElementById('display-title').innerText = title;
+            document.getElementById('display-name').innerText = name;
+            document.getElementById('display-msg').innerText = msg;
+            document.getElementById('display-photo').src = photo;
+
+            // Konfeti patlat
+            setTimeout(startConfetti, 500);
+        }
+
+        // --- 3. ANİMASYON EFEKTLERİ ---
+        function startConfetti() {
+            var duration = 3000;
+            var end = Date.now() + duration;
+
+            (function frame() {
+                confetti({
+                    particleCount: 5,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#ff4081', '#7c4dff', '#ffffff']
+                });
+                confetti({
+                    particleCount: 5,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#ff4081', '#7c4dff', '#ffffff']
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+
+    </script>
+</body>
+</html>
