@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Özel Gün Kutlama Portalı</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
         :root {
             --primary-color: #ff6b8b;
@@ -106,6 +107,11 @@
             background: var(--success-color);
         }
         
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+        
         .section-title {
             font-size: 1.8rem;
             color: var(--dark-color);
@@ -204,7 +210,7 @@
             background: white;
             border-radius: 15px;
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             max-height: 90vh;
             overflow-y: auto;
             padding: 30px;
@@ -344,6 +350,125 @@
             border-top: 1px solid #eee;
         }
         
+        /* Link yönetimi bölümü */
+        .link-management {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #e9ecef;
+        }
+        
+        .link-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .link-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .link-input-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .link-input {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        
+        .qr-container {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+        
+        #qr-code {
+            display: inline-block;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            margin: 15px 0;
+        }
+        
+        .social-share {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .social-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 50px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.3s, opacity 0.3s;
+        }
+        
+        .social-btn:hover {
+            transform: translateY(-3px);
+            opacity: 0.9;
+        }
+        
+        .whatsapp { background: #25D366; }
+        .facebook { background: #3b5998; }
+        .twitter { background: #1DA1F2; }
+        .instagram { background: linear-gradient(45deg, #405DE6, #E1306C, #FFDC80); }
+        .telegram { background: #0088cc; }
+        
+        .copy-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 15px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .copy-btn:hover {
+            background: #5a6268;
+        }
+        
+        .copy-success {
+            color: var(--success-color);
+            font-size: 0.9rem;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
         /* Confetti container */
         #confetti-container {
             position: fixed;
@@ -437,6 +562,15 @@
             .modal-content {
                 padding: 20px;
             }
+            
+            .social-share {
+                gap: 10px;
+            }
+            
+            .social-btn {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
         }
         
         @media (max-width: 480px) {
@@ -450,6 +584,16 @@
             
             .celebrations-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .action-buttons .btn {
+                width: 100%;
+                max-width: 300px;
             }
         }
     </style>
@@ -583,22 +727,80 @@
         </div>
     </div>
     
-    <!-- Success Modal -->
+    <!-- Success Modal with Link Management -->
     <div id="success-modal" class="modal">
         <div class="modal-content confirmation-modal">
             <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
             <h2 class="section-title">Kutlamanız Yayınlandı!</h2>
             <div class="confirmation-text">
-                <p>Kutlamanız başarıyla oluşturuldu ve yayınlandı.</p>
-                <p><strong>Kutlama Linkiniz:</strong></p>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 1.1rem;">
-                    <a id="celebration-link" href="#" target="_blank"></a>
+                <p>Kutlamanız başarıyla oluşturuldu ve yayınlandı. Aşağıdaki linkleri kullanarak kutlamanızı paylaşabilirsiniz.</p>
+                
+                <div class="link-management">
+                    <div class="link-header">
+                        <h3 style="margin: 0;">Kutlama Linki</h3>
+                        <div>
+                            <button id="shorten-link-btn" class="btn btn-small"><i class="fas fa-link"></i> Link Kısalt</button>
+                            <button id="refresh-qr-btn" class="btn btn-small"><i class="fas fa-sync-alt"></i> QR Yenile</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Orijinal Link -->
+                    <div class="link-box">
+                        <div class="link-input-group">
+                            <label>Orijinal Link</label>
+                            <div class="link-input" id="original-link-text"></div>
+                            <button class="copy-btn" data-copy="original-link-text">
+                                <i class="far fa-copy"></i> Kopyala
+                            </button>
+                            <div class="copy-success" id="copy-success-1">✓ Kopyalandı!</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Kısaltılmış Link -->
+                    <div class="link-box">
+                        <div class="link-input-group">
+                            <label>Kısaltılmış Link</label>
+                            <div class="link-input" id="shortened-link-text">Link kısaltmak için "Link Kısalt" butonuna tıklayın</div>
+                            <button class="copy-btn" data-copy="shortened-link-text">
+                                <i class="far fa-copy"></i> Kopyala
+                            </button>
+                            <div class="copy-success" id="copy-success-2">✓ Kopyalandı!</div>
+                        </div>
+                    </div>
                 </div>
-                <p>Bu linki istediğiniz kişiyle paylaşabilirsiniz. Linke tıklandığında konfeti animasyonu ile kutlama sayfası açılacaktır.</p>
+                
+                <!-- QR Kodu -->
+                <div class="qr-container">
+                    <h3>QR Kodu</h3>
+                    <p>QR kodu taratılarak kutlama sayfasına direkt erişim sağlanabilir.</p>
+                    <div id="qr-code"></div>
+                    <div>
+                        <button id="download-qr-btn" class="btn btn-small"><i class="fas fa-download"></i> QR Kodu İndir</button>
+                        <button id="share-qr-btn" class="btn btn-small"><i class="fas fa-share-alt"></i> QR Paylaş</button>
+                    </div>
+                </div>
+                
+                <!-- Sosyal Medya Paylaşım -->
+                <div class="social-share">
+                    <h3 style="width: 100%;">Sosyal Medyada Paylaş</h3>
+                    <a href="#" id="share-whatsapp" class="social-btn whatsapp" target="_blank">
+                        <i class="fab fa-whatsapp"></i> WhatsApp
+                    </a>
+                    <a href="#" id="share-facebook" class="social-btn facebook" target="_blank">
+                        <i class="fab fa-facebook-f"></i> Facebook
+                    </a>
+                    <a href="#" id="share-twitter" class="social-btn twitter" target="_blank">
+                        <i class="fab fa-twitter"></i> Twitter
+                    </a>
+                    <a href="#" id="share-telegram" class="social-btn telegram" target="_blank">
+                        <i class="fab fa-telegram"></i> Telegram
+                    </a>
+                </div>
             </div>
-            <div style="display: flex; gap: 15px; justify-content: center;">
-                <button id="view-celebration-btn" class="btn">Kutlamayı Görüntüle</button>
-                <button id="close-success-btn" class="btn btn-secondary">Tamam</button>
+            
+            <div class="action-buttons">
+                <button id="view-celebration-btn" class="btn"><i class="fas fa-eye"></i> Kutlamayı Görüntüle</button>
+                <button id="close-success-btn" class="btn btn-secondary"><i class="fas fa-check"></i> Tamam</button>
             </div>
         </div>
     </div>
@@ -629,7 +831,10 @@
             celebrations: JSON.parse(localStorage.getItem('celebrations')) || [],
             validCodes: ['BDAY-2023-1234', 'LOVE-2023-5678', 'ANNV-2023-9012', 'MDAY-2023-3456', 'XMAS-2023-7890'],
             currentCode: '',
-            currentCelebration: null
+            currentCelebration: null,
+            currentCelebrationId: null,
+            shortenedLink: null,
+            currentQRCode: null
         };
         
         // DOM Elementleri
@@ -655,8 +860,22 @@
         const photoInput = document.getElementById('celebration-photo');
         const photoPreview = document.getElementById('photo-preview');
         const confirmationDetails = document.getElementById('confirmation-details');
-        const celebrationLink = document.getElementById('celebration-link');
         const confettiContainer = document.getElementById('confetti-container');
+        
+        // Yeni link yönetimi elementleri
+        const originalLinkText = document.getElementById('original-link-text');
+        const shortenedLinkText = document.getElementById('shortened-link-text');
+        const shortenLinkBtn = document.getElementById('shorten-link-btn');
+        const refreshQrBtn = document.getElementById('refresh-qr-btn');
+        const downloadQrBtn = document.getElementById('download-qr-btn');
+        const shareQrBtn = document.getElementById('share-qr-btn');
+        const qrCodeContainer = document.getElementById('qr-code');
+        const socialShareButtons = {
+            whatsapp: document.getElementById('share-whatsapp'),
+            facebook: document.getElementById('share-facebook'),
+            twitter: document.getElementById('share-twitter'),
+            telegram: document.getElementById('share-telegram')
+        };
         
         // Başlangıçta kutlamaları listele
         document.addEventListener('DOMContentLoaded', function() {
@@ -669,6 +888,24 @@
             if (celebrationId) {
                 showCelebrationPage(celebrationId);
             }
+            
+            // Copy butonları için event listener ekle
+            document.querySelectorAll('.copy-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-copy');
+                    const targetElement = document.getElementById(targetId);
+                    const textToCopy = targetElement.textContent;
+                    
+                    copyToClipboard(textToCopy);
+                    
+                    // Başarı mesajını göster
+                    const successId = this.nextElementSibling.id;
+                    showCopySuccess(successId);
+                });
+            });
+            
+            // Sosyal medya butonları için event listener'lar
+            setupSocialShareButtons();
         });
         
         // Kutlamaları listele
@@ -848,6 +1085,7 @@
             
             // Kutlama için benzersiz ID oluştur
             const celebrationId = 'cel-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            state.currentCelebrationId = celebrationId;
             
             // Kutlamayı kaydet
             const newCelebration = {
@@ -866,8 +1104,14 @@
             const currentUrl = window.location.origin + window.location.pathname;
             const celebrationUrl = `${currentUrl}?celebration=${celebrationId}`;
             
-            celebrationLink.href = celebrationUrl;
-            celebrationLink.textContent = celebrationUrl;
+            // Link yönetimi bölümünü hazırla
+            setupLinkManagement(celebrationUrl);
+            
+            // QR kod oluştur
+            generateQRCode(celebrationUrl);
+            
+            // Sosyal medya linklerini güncelle
+            updateSocialShareLinks(celebrationUrl, newCelebration.personName, getCelebrationTypeText(newCelebration.type));
             
             successModal.style.display = 'flex';
             
@@ -875,11 +1119,176 @@
             renderCelebrations();
         });
         
+        // Link yönetimini kur
+        function setupLinkManagement(celebrationUrl) {
+            // Orijinal linki göster
+            originalLinkText.textContent = celebrationUrl;
+            
+            // Kısaltılmış linki sıfırla
+            state.shortenedLink = null;
+            shortenedLinkText.textContent = 'Link kısaltmak için "Link Kısalt" butonuna tıklayın';
+            
+            // Link kısaltma butonu
+            shortenLinkBtn.onclick = () => shortenLink(celebrationUrl);
+            
+            // QR yenileme butonu
+            refreshQrBtn.onclick = () => generateQRCode(state.shortenedLink || celebrationUrl);
+            
+            // QR indirme butonu
+            downloadQrBtn.onclick = downloadQRCode;
+            
+            // QR paylaşım butonu
+            shareQrBtn.onclick = shareQRCode;
+        }
+        
+        // Link kısaltma fonksiyonu (mock işlevi - gerçekte bir URL kısaltma servisi kullanılmalı)
+        function shortenLink(originalUrl) {
+            // Bu örnekte mock bir kısaltma yapıyoruz
+            // Gerçek uygulamada bit.ly, tinyurl.com veya benzeri bir servis kullanılmalı
+            
+            // Benzersiz bir kısa kod oluştur
+            const shortCode = Math.random().toString(36).substr(2, 8).toUpperCase();
+            const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+            const shortenedUrl = `${baseUrl}c/${shortCode}`;
+            
+            state.shortenedLink = shortenedUrl;
+            shortenedLinkText.textContent = shortenedUrl;
+            
+            // QR kodu güncelle
+            generateQRCode(shortenedUrl);
+            
+            // Sosyal medya linklerini güncelle
+            updateSocialShareLinks(shortenedUrl, state.currentCelebration.personName, getCelebrationTypeText(state.currentCelebration.type));
+            
+            // Kullanıcıya bilgi ver
+            alert('Link başarıyla kısaltıldı! Kısaltılmış link: ' + shortenedUrl);
+        }
+        
+        // QR kodu oluştur
+        function generateQRCode(url) {
+            // Önceki QR kodunu temizle
+            qrCodeContainer.innerHTML = '';
+            
+            // Yeni QR kodu oluştur
+            QRCode.toCanvas(qrCodeContainer, url, {
+                width: 200,
+                height: 200,
+                margin: 1,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, function(error) {
+                if (error) console.error(error);
+                state.currentQRCode = qrCodeContainer.querySelector('canvas');
+            });
+        }
+        
+        // QR kodu indir
+        function downloadQRCode() {
+            if (!state.currentQRCode) {
+                alert('Önce bir QR kodu oluşturmalısınız.');
+                return;
+            }
+            
+            const link = document.createElement('a');
+            link.download = `kutlama-qr-${state.currentCelebrationId}.png`;
+            link.href = state.currentQRCode.toDataURL('image/png');
+            link.click();
+        }
+        
+        // QR kodu paylaş
+        function shareQRCode() {
+            if (!state.currentQRCode) {
+                alert('Önce bir QR kodu oluşturmalısınız.');
+                return;
+            }
+            
+            if (navigator.share) {
+                // Web Share API destekleniyorsa
+                navigator.share({
+                    title: `${state.currentCelebration.personName} için Özel Gün Kutlaması`,
+                    text: `${state.currentCelebration.personName} için özel bir kutlama sayfası oluşturdum!`,
+                    url: state.shortenedLink || originalLinkText.textContent
+                })
+                .then(() => console.log('Paylaşım başarılı'))
+                .catch(error => console.log('Paylaşım hatası:', error));
+            } else {
+                // Web Share API desteklenmiyorsa alternatif
+                const qrUrl = state.currentQRCode.toDataURL('image/png');
+                const newWindow = window.open();
+                newWindow.document.write(`
+                    <html>
+                        <head><title>QR Kod Paylaşımı</title></head>
+                        <body style="text-align: center; padding: 20px;">
+                            <h2>QR Kodu Paylaş</h2>
+                            <p>QR kodunu kaydetmek için sağ tıklayıp "Resmi farklı kaydet" seçeneğini kullanın.</p>
+                            <img src="${qrUrl}" alt="QR Code" style="max-width: 300px; margin: 20px;">
+                            <p>Veya bu linki paylaşın: <br><strong>${state.shortenedLink || originalLinkText.textContent}</strong></p>
+                        </body>
+                    </html>
+                `);
+            }
+        }
+        
+        // Sosyal medya paylaşım butonlarını kur
+        function setupSocialShareButtons() {
+            // Bu fonksiyon DOMContentLoaded'da çağrılıyor
+            // Sosyal medya linkleri updateSocialShareLinks fonksiyonunda güncellenecek
+        }
+        
+        // Sosyal medya paylaşım linklerini güncelle
+        function updateSocialShareLinks(url, personName, celebrationType) {
+            const message = `${personName} için ${celebrationType} kutlaması! Özel kutlama sayfasını görüntülemek için tıkla: ${url}`;
+            const encodedMessage = encodeURIComponent(message);
+            const encodedUrl = encodeURIComponent(url);
+            
+            // WhatsApp
+            socialShareButtons.whatsapp.href = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+            
+            // Facebook
+            socialShareButtons.facebook.href = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedMessage}`;
+            
+            // Twitter
+            const twitterMessage = `${personName} için özel ${celebrationType} kutlaması! ${url}`;
+            socialShareButtons.twitter.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterMessage)}`;
+            
+            // Telegram
+            socialShareButtons.telegram.href = `https://t.me/share/url?url=${encodedUrl}&text=${encodedMessage}`;
+        }
+        
+        // Panoya kopyalama fonksiyonu
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(
+                () => {
+                    console.log('Metin panoya kopyalandı: ' + text);
+                },
+                (err) => {
+                    console.error('Kopyalama hatası: ', err);
+                    // Fallback method
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                }
+            );
+        }
+        
+        // Kopyalama başarı mesajını göster
+        function showCopySuccess(elementId) {
+            const successElement = document.getElementById(elementId);
+            successElement.style.display = 'block';
+            setTimeout(() => {
+                successElement.style.display = 'none';
+            }, 2000);
+        }
+        
         // Başarı modalı butonları
         viewCelebrationBtn.addEventListener('click', () => {
-            const celebrationId = state.celebrations[state.celebrations.length - 1].id;
             successModal.style.display = 'none';
-            showCelebrationPage(celebrationId);
+            showCelebrationPage(state.currentCelebrationId);
         });
         
         closeSuccessBtn.addEventListener('click', () => {
