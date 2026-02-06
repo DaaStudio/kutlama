@@ -469,6 +469,41 @@
             margin-top: 20px;
         }
         
+        /* Link istatistikleri */
+        .link-stats {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            border: 1px solid #e9ecef;
+            display: none;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
         /* Confetti container */
         #confetti-container {
             position: fixed;
@@ -543,6 +578,40 @@
             margin-top: 30px;
             color: #6c757d;
             font-style: italic;
+        }
+        
+        /* Short link redirect page */
+        .redirect-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: var(--gradient);
+        }
+        
+        .redirect-content {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 600px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+        }
+        
+        .redirect-loader {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
         /* Responsive adjustments */
@@ -740,7 +809,7 @@
                         <h3 style="margin: 0;">Kutlama Linki</h3>
                         <div>
                             <button id="shorten-link-btn" class="btn btn-small"><i class="fas fa-link"></i> Link Kısalt</button>
-                            <button id="refresh-qr-btn" class="btn btn-small"><i class="fas fa-sync-alt"></i> QR Yenile</button>
+                            <button id="show-stats-btn" class="btn btn-small"><i class="fas fa-chart-bar"></i> İstatistikler</button>
                         </div>
                     </div>
                     
@@ -765,6 +834,29 @@
                                 <i class="far fa-copy"></i> Kopyala
                             </button>
                             <div class="copy-success" id="copy-success-2">✓ Kopyalandı!</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Link İstatistikleri -->
+                    <div id="link-stats" class="link-stats">
+                        <h4>Link İstatistikleri</h4>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value" id="clicks-count">0</div>
+                                <div class="stat-label">Toplam Tıklama</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="unique-clicks">0</div>
+                                <div class="stat-label">Benzersiz Ziyaretçi</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="created-date">-</div>
+                                <div class="stat-label">Oluşturulma</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="last-click">-</div>
+                                <div class="stat-label">Son Tıklama</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -829,11 +921,12 @@
         const state = {
             usedCodes: JSON.parse(localStorage.getItem('usedCodes')) || [],
             celebrations: JSON.parse(localStorage.getItem('celebrations')) || [],
+            shortLinks: JSON.parse(localStorage.getItem('shortLinks')) || {},
             validCodes: ['BDAY-2023-1234', 'LOVE-2023-5678', 'ANNV-2023-9012', 'MDAY-2023-3456', 'XMAS-2023-7890'],
             currentCode: '',
             currentCelebration: null,
             currentCelebrationId: null,
-            shortenedLink: null,
+            currentShortCode: null,
             currentQRCode: null
         };
         
@@ -866,10 +959,16 @@
         const originalLinkText = document.getElementById('original-link-text');
         const shortenedLinkText = document.getElementById('shortened-link-text');
         const shortenLinkBtn = document.getElementById('shorten-link-btn');
-        const refreshQrBtn = document.getElementById('refresh-qr-btn');
+        const showStatsBtn = document.getElementById('show-stats-btn');
         const downloadQrBtn = document.getElementById('download-qr-btn');
         const shareQrBtn = document.getElementById('share-qr-btn');
         const qrCodeContainer = document.getElementById('qr-code');
+        const linkStats = document.getElementById('link-stats');
+        const clicksCount = document.getElementById('clicks-count');
+        const uniqueClicks = document.getElementById('unique-clicks');
+        const createdDate = document.getElementById('created-date');
+        const lastClick = document.getElementById('last-click');
+        
         const socialShareButtons = {
             whatsapp: document.getElementById('share-whatsapp'),
             facebook: document.getElementById('share-facebook'),
@@ -879,6 +978,9 @@
         
         // Başlangıçta kutlamaları listele
         document.addEventListener('DOMContentLoaded', function() {
+            // Kısa link yönlendirmesini kontrol et
+            checkShortLinkRedirect();
+            
             renderCelebrations();
             
             // URL'de kutlama ID'si varsa kutlama sayfasını göster
@@ -887,6 +989,8 @@
             
             if (celebrationId) {
                 showCelebrationPage(celebrationId);
+                // Link tıklamasını kaydet
+                trackLinkClick(celebrationId);
             }
             
             // Copy butonları için event listener ekle
@@ -896,17 +1000,119 @@
                     const targetElement = document.getElementById(targetId);
                     const textToCopy = targetElement.textContent;
                     
-                    copyToClipboard(textToCopy);
-                    
-                    // Başarı mesajını göster
-                    const successId = this.nextElementSibling.id;
-                    showCopySuccess(successId);
+                    if (textToCopy && !textToCopy.includes('Link kısaltmak için')) {
+                        copyToClipboard(textToCopy);
+                        
+                        // Başarı mesajını göster
+                        const successId = this.nextElementSibling.id;
+                        showCopySuccess(successId);
+                    }
                 });
             });
             
             // Sosyal medya butonları için event listener'lar
             setupSocialShareButtons();
         });
+        
+        // Kısa link yönlendirmesini kontrol et
+        function checkShortLinkRedirect() {
+            const path = window.location.pathname;
+            const pathParts = path.split('/');
+            const shortCode = pathParts[pathParts.length - 1];
+            
+            // Eğer URL'de /c/XXXXXX formatında bir kısa kod varsa
+            if (path.includes('/c/') && shortCode && shortCode.length >= 4) {
+                const shortLinkData = state.shortLinks[shortCode];
+                
+                if (shortLinkData) {
+                    // Tıklamayı kaydet
+                    shortLinkData.clicks = (shortLinkData.clicks || 0) + 1;
+                    shortLinkData.uniqueClicks = (shortLinkData.uniqueClicks || 0) + 1;
+                    shortLinkData.lastClick = new Date().toISOString();
+                    
+                    // Tarayıcı çerezi kontrolü (benzersiz ziyaretçi için)
+                    const visitorId = getVisitorId();
+                    if (!shortLinkData.visitors) shortLinkData.visitors = [];
+                    if (!shortLinkData.visitors.includes(visitorId)) {
+                        shortLinkData.visitors.push(visitorId);
+                        shortLinkData.uniqueClicks = shortLinkData.visitors.length;
+                    }
+                    
+                    localStorage.setItem('shortLinks', JSON.stringify(state.shortLinks));
+                    
+                    // Yönlendirme sayfasını göster
+                    showRedirectPage(shortLinkData.originalUrl);
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // Yönlendirme sayfasını göster
+        function showRedirectPage(destinationUrl) {
+            document.body.innerHTML = '';
+            
+            const redirectContent = `
+                <div class="redirect-page">
+                    <div class="redirect-content">
+                        <h2><i class="fas fa-external-link-alt"></i> Yönlendiriliyorsunuz</h2>
+                        <p>Kutlama sayfasına yönlendiriliyorsunuz. Lütfen bekleyin...</p>
+                        <div class="redirect-loader"></div>
+                        <p>Eğer otomatik olarak yönlendirilmezseniz, <a href="${destinationUrl}" id="manual-redirect">buraya tıklayın</a>.</p>
+                        <p style="margin-top: 20px; font-size: 0.9rem; color: #6c757d;">
+                            <i class="fas fa-shield-alt"></i> Güvenli bağlantı • Özel Gün Kutlamaları
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            document.body.innerHTML = redirectContent;
+            
+            // 3 saniye sonra yönlendir
+            setTimeout(() => {
+                window.location.href = destinationUrl;
+            }, 3000);
+            
+            // Manuel yönlendirme için
+            document.getElementById('manual-redirect').addEventListener('click', (e) => {
+                e.preventDefault();
+                window.location.href = destinationUrl;
+            });
+        }
+        
+        // Ziyaretçi ID'si oluştur (çerez benzeri)
+        function getVisitorId() {
+            let visitorId = localStorage.getItem('visitorId');
+            if (!visitorId) {
+                visitorId = 'visitor-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('visitorId', visitorId);
+            }
+            return visitorId;
+        }
+        
+        // Link tıklamasını kaydet
+        function trackLinkClick(celebrationId) {
+            // Orijinal link tıklamalarını kaydet
+            if (state.currentCelebrationId === celebrationId) {
+                // Bu kutlamanın tıklamalarını artır
+                const celebration = state.celebrations.find(c => c.id === celebrationId);
+                if (celebration) {
+                    celebration.clicks = (celebration.clicks || 0) + 1;
+                    celebration.lastClick = new Date().toISOString();
+                    localStorage.setItem('celebrations', JSON.stringify(state.celebrations));
+                }
+            }
+            
+            // Kısa link tıklamalarını kaydet
+            if (state.currentShortCode) {
+                const shortLinkData = state.shortLinks[state.currentShortCode];
+                if (shortLinkData && shortLinkData.celebrationId === celebrationId) {
+                    shortLinkData.clicks = (shortLinkData.clicks || 0) + 1;
+                    shortLinkData.lastClick = new Date().toISOString();
+                    localStorage.setItem('shortLinks', JSON.stringify(state.shortLinks));
+                }
+            }
+        }
         
         // Kutlamaları listele
         function renderCelebrations() {
@@ -929,6 +1135,7 @@
             recentCelebrations.forEach(celebration => {
                 const celebrationDate = new Date(celebration.date).toLocaleDateString('tr-TR');
                 const celebrationTypeText = getCelebrationTypeText(celebration.type);
+                const clickCount = celebration.clicks || 0;
                 
                 const celebrationCard = document.createElement('div');
                 celebrationCard.className = 'celebration-card';
@@ -942,7 +1149,12 @@
                         <h4 class="celebration-name">${celebration.personName}</h4>
                         <p class="celebration-date">${celebrationDate}</p>
                         <p class="celebration-description">${celebration.description ? celebration.description.substring(0, 80) + '...' : 'Açıklama yok'}</p>
-                        <a href="?celebration=${celebration.id}" class="celebration-link" target="_blank">Kutlamayı Görüntüle</a>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                            <a href="?celebration=${celebration.id}" class="celebration-link" target="_blank">Kutlamayı Görüntüle</a>
+                            <span style="font-size: 0.8rem; color: #6c757d;">
+                                <i class="fas fa-eye"></i> ${clickCount}
+                            </span>
+                        </div>
                     </div>
                 `;
                 
@@ -1091,7 +1303,9 @@
             const newCelebration = {
                 id: celebrationId,
                 code: state.currentCode,
-                ...state.currentCelebration
+                ...state.currentCelebration,
+                clicks: 0,
+                lastClick: null
             };
             
             state.celebrations.push(newCelebration);
@@ -1105,7 +1319,7 @@
             const celebrationUrl = `${currentUrl}?celebration=${celebrationId}`;
             
             // Link yönetimi bölümünü hazırla
-            setupLinkManagement(celebrationUrl);
+            setupLinkManagement(celebrationUrl, celebrationId);
             
             // QR kod oluştur
             generateQRCode(celebrationUrl);
@@ -1120,48 +1334,126 @@
         });
         
         // Link yönetimini kur
-        function setupLinkManagement(celebrationUrl) {
+        function setupLinkManagement(celebrationUrl, celebrationId) {
             // Orijinal linki göster
             originalLinkText.textContent = celebrationUrl;
             
             // Kısaltılmış linki sıfırla
-            state.shortenedLink = null;
+            state.currentShortCode = null;
             shortenedLinkText.textContent = 'Link kısaltmak için "Link Kısalt" butonuna tıklayın';
             
             // Link kısaltma butonu
-            shortenLinkBtn.onclick = () => shortenLink(celebrationUrl);
+            shortenLinkBtn.onclick = () => createShortLink(celebrationUrl, celebrationId);
             
-            // QR yenileme butonu
-            refreshQrBtn.onclick = () => generateQRCode(state.shortenedLink || celebrationUrl);
+            // İstatistikler butonu
+            showStatsBtn.onclick = () => toggleLinkStats(celebrationId);
             
             // QR indirme butonu
             downloadQrBtn.onclick = downloadQRCode;
             
             // QR paylaşım butonu
             shareQrBtn.onclick = shareQRCode;
+            
+            // İstatistikleri gizle
+            linkStats.style.display = 'none';
         }
         
-        // Link kısaltma fonksiyonu (mock işlevi - gerçekte bir URL kısaltma servisi kullanılmalı)
-        function shortenLink(originalUrl) {
-            // Bu örnekte mock bir kısaltma yapıyoruz
-            // Gerçek uygulamada bit.ly, tinyurl.com veya benzeri bir servis kullanılmalı
+        // Kısa link oluştur
+        function createShortLink(originalUrl, celebrationId) {
+            // Benzersiz kısa kod oluştur
+            let shortCode;
+            let attempts = 0;
             
-            // Benzersiz bir kısa kod oluştur
-            const shortCode = Math.random().toString(36).substr(2, 8).toUpperCase();
-            const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
-            const shortenedUrl = `${baseUrl}c/${shortCode}`;
+            do {
+                shortCode = generateShortCode(6);
+                attempts++;
+                if (attempts > 10) {
+                    shortCode = generateShortCode(8); // Daha uzun kod deneyelim
+                }
+            } while (state.shortLinks[shortCode] && attempts < 20);
             
-            state.shortenedLink = shortenedUrl;
-            shortenedLinkText.textContent = shortenedUrl;
+            if (attempts >= 20) {
+                alert('Kısa link oluşturulamadı. Lütfen tekrar deneyin.');
+                return;
+            }
+            
+            // Kısa link verilerini kaydet
+            state.shortLinks[shortCode] = {
+                originalUrl: originalUrl,
+                celebrationId: celebrationId,
+                shortCode: shortCode,
+                createdAt: new Date().toISOString(),
+                clicks: 0,
+                uniqueClicks: 0,
+                visitors: [],
+                lastClick: null
+            };
+            
+            localStorage.setItem('shortLinks', JSON.stringify(state.shortLinks));
+            
+            // Kısa link URL'sini oluştur
+            const baseUrl = window.location.origin;
+            const shortUrl = `${baseUrl}/c/${shortCode}`;
+            
+            // Kısa linki göster
+            state.currentShortCode = shortCode;
+            shortenedLinkText.textContent = shortUrl;
             
             // QR kodu güncelle
-            generateQRCode(shortenedUrl);
+            generateQRCode(shortUrl);
             
             // Sosyal medya linklerini güncelle
-            updateSocialShareLinks(shortenedUrl, state.currentCelebration.personName, getCelebrationTypeText(state.currentCelebration.type));
+            updateSocialShareLinks(shortUrl, state.currentCelebration.personName, getCelebrationTypeText(state.currentCelebration.type));
             
             // Kullanıcıya bilgi ver
-            alert('Link başarıyla kısaltıldı! Kısaltılmış link: ' + shortenedUrl);
+            alert(`Link başarıyla kısaltıldı!\n\nKısa link: ${shortUrl}\n\nBu link tıklandığında orijinal kutlama sayfasına yönlendirecektir.`);
+            
+            // İstatistikleri göster
+            updateLinkStats(shortCode);
+            linkStats.style.display = 'block';
+        }
+        
+        // Kısa kod oluştur
+        function generateShortCode(length = 6) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+        
+        // Link istatistiklerini göster/gizle
+        function toggleLinkStats(celebrationId) {
+            if (linkStats.style.display === 'none') {
+                if (state.currentShortCode) {
+                    updateLinkStats(state.currentShortCode);
+                    linkStats.style.display = 'block';
+                } else {
+                    alert('Önce bir kısa link oluşturmalısınız.');
+                }
+            } else {
+                linkStats.style.display = 'none';
+            }
+        }
+        
+        // Link istatistiklerini güncelle
+        function updateLinkStats(shortCode) {
+            const linkData = state.shortLinks[shortCode];
+            if (!linkData) return;
+            
+            clicksCount.textContent = linkData.clicks || 0;
+            uniqueClicks.textContent = linkData.uniqueClicks || 0;
+            
+            const created = new Date(linkData.createdAt);
+            createdDate.textContent = created.toLocaleDateString('tr-TR');
+            
+            if (linkData.lastClick) {
+                const last = new Date(linkData.lastClick);
+                lastClick.textContent = last.toLocaleDateString('tr-TR');
+            } else {
+                lastClick.textContent = 'Henüz yok';
+            }
         }
         
         // QR kodu oluştur
@@ -1209,7 +1501,7 @@
                 navigator.share({
                     title: `${state.currentCelebration.personName} için Özel Gün Kutlaması`,
                     text: `${state.currentCelebration.personName} için özel bir kutlama sayfası oluşturdum!`,
-                    url: state.shortenedLink || originalLinkText.textContent
+                    url: shortenedLinkText.textContent || originalLinkText.textContent
                 })
                 .then(() => console.log('Paylaşım başarılı'))
                 .catch(error => console.log('Paylaşım hatası:', error));
@@ -1224,7 +1516,7 @@
                             <h2>QR Kodu Paylaş</h2>
                             <p>QR kodunu kaydetmek için sağ tıklayıp "Resmi farklı kaydet" seçeneğini kullanın.</p>
                             <img src="${qrUrl}" alt="QR Code" style="max-width: 300px; margin: 20px;">
-                            <p>Veya bu linki paylaşın: <br><strong>${state.shortenedLink || originalLinkText.textContent}</strong></p>
+                            <p>Veya bu linki paylaşın: <br><strong>${shortenedLinkText.textContent || originalLinkText.textContent}</strong></p>
                         </body>
                     </html>
                 `);
@@ -1429,7 +1721,9 @@
                     personName: 'Ayşe Kaya',
                     description: 'Sevgili Ayşe, nice mutlu, sağlıklı ve başarı dolu yıllara! Seni çok seviyoruz.',
                     photo: '',
-                    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+                    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+                    clicks: 15,
+                    lastClick: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
                 },
                 {
                     id: 'cel-example-2',
@@ -1438,7 +1732,9 @@
                     personName: 'Ahmet ve Fatma Çelik',
                     description: 'Evlilik yıl dönümünüz kutlu olsun! Nice mutlu, huzurlu yıllara birlikte...',
                     photo: '',
-                    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+                    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                    clicks: 8,
+                    lastClick: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
                 },
                 {
                     id: 'cel-example-3',
@@ -1447,12 +1743,39 @@
                     personName: 'Zeynep Öztürk',
                     description: 'Canım annem, anneler günün kutlu olsun! Sen bizim en değerli hazinemizsin.',
                     photo: '',
-                    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+                    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+                    clicks: 22,
+                    lastClick: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
                 }
             ];
             
             state.celebrations.push(...exampleCelebrations);
+            
+            // Örnek kısa linkler ekle
+            state.shortLinks['abc123'] = {
+                originalUrl: window.location.origin + window.location.pathname + '?celebration=cel-example-1',
+                celebrationId: 'cel-example-1',
+                shortCode: 'abc123',
+                createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+                clicks: 15,
+                uniqueClicks: 12,
+                visitors: ['visitor-1', 'visitor-2', 'visitor-3'],
+                lastClick: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+            };
+            
+            state.shortLinks['def456'] = {
+                originalUrl: window.location.origin + window.location.pathname + '?celebration=cel-example-2',
+                celebrationId: 'cel-example-2',
+                shortCode: 'def456',
+                createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                clicks: 8,
+                uniqueClicks: 6,
+                visitors: ['visitor-4', 'visitor-5'],
+                lastClick: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
+            };
+            
             localStorage.setItem('celebrations', JSON.stringify(state.celebrations));
+            localStorage.setItem('shortLinks', JSON.stringify(state.shortLinks));
             renderCelebrations();
         }
     </script>
