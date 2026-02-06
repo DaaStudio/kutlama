@@ -799,6 +799,7 @@
     <!-- Success Modal with Link Management -->
     <div id="success-modal" class="modal">
         <div class="modal-content confirmation-modal">
+            <span class="close-modal" id="close-success-modal">&times;</span>
             <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
             <h2 class="section-title">Kutlamanız Yayınlandı!</h2>
             <div class="confirmation-text">
@@ -922,7 +923,7 @@
             usedCodes: JSON.parse(localStorage.getItem('usedCodes')) || [],
             celebrations: JSON.parse(localStorage.getItem('celebrations')) || [],
             shortLinks: JSON.parse(localStorage.getItem('shortLinks')) || {},
-            validCodes: ['BDAY-2023-1234', 'LOVE-2023-5678', 'ANNV-2023-9012', 'MDAY-2023-3456', 'XMAS-2023-7890'],
+            validCodes: ['BDAY-2023-4567', 'LOVE-2023-5678', 'ANNV-2023-9012', 'MDAY-2023-3456', 'XMAS-2023-7890'],
             currentCode: '',
             currentCelebration: null,
             currentCelebrationId: null,
@@ -941,6 +942,7 @@
         const startCelebrationBtn = document.getElementById('start-celebration-btn');
         const closeCodeModal = document.getElementById('close-code-modal');
         const closeCelebrationModal = document.getElementById('close-celebration-modal');
+        const closeSuccessModal = document.getElementById('close-success-modal');
         const verifyCodeBtn = document.getElementById('verify-code-btn');
         const celebrationCodeInput = document.getElementById('celebration-code');
         const publishBtn = document.getElementById('publish-btn');
@@ -1197,6 +1199,10 @@
             celebrationModal.style.display = 'none';
         });
         
+        closeSuccessModal.addEventListener('click', () => {
+            successModal.style.display = 'none';
+        });
+        
         // Kod doğrulama
         verifyCodeBtn.addEventListener('click', () => {
             const code = celebrationCodeInput.value.trim().toUpperCase();
@@ -1289,7 +1295,7 @@
             celebrationModal.style.display = 'flex';
         });
         
-        // Yayınlama işlemini onayla
+        // Yayınlama işlemini onayla - DÜZELTİLMİŞ BÖLÜM
         confirmPublishBtn.addEventListener('click', () => {
             // Kullanılan kodu kaydet
             state.usedCodes.push(state.currentCode);
@@ -1318,29 +1324,44 @@
             const currentUrl = window.location.origin + window.location.pathname;
             const celebrationUrl = `${currentUrl}?celebration=${celebrationId}`;
             
-            // Link yönetimi bölümünü hazırla
-            setupLinkManagement(celebrationUrl, celebrationId);
+            // Formu temizle
+            celebrationForm.reset();
+            photoPreview.style.display = 'none';
             
-            // QR kod oluştur
-            generateQRCode(celebrationUrl);
-            
-            // Sosyal medya linklerini güncelle
-            updateSocialShareLinks(celebrationUrl, newCelebration.personName, getCelebrationTypeText(newCelebration.type));
-            
-            successModal.style.display = 'flex';
+            // Link yönetimi bölümünü hazırla - DEĞİŞTİRİLDİ
+            setTimeout(() => {
+                setupLinkManagement(celebrationUrl, celebrationId, newCelebration);
+                successModal.style.display = 'flex';
+            }, 100);
             
             // Kutlamalar listesini güncelle
             renderCelebrations();
         });
         
-        // Link yönetimini kur
-        function setupLinkManagement(celebrationUrl, celebrationId) {
+        // Link yönetimini kur - GÜNCELLENDİ
+        function setupLinkManagement(celebrationUrl, celebrationId, celebrationData) {
+            console.log("Link management setting up:", celebrationUrl, celebrationId, celebrationData);
+            
             // Orijinal linki göster
             originalLinkText.textContent = celebrationUrl;
             
             // Kısaltılmış linki sıfırla
             state.currentShortCode = null;
             shortenedLinkText.textContent = 'Link kısaltmak için "Link Kısalt" butonuna tıklayın';
+            
+            // QR kodu oluştur
+            generateQRCode(celebrationUrl);
+            
+            // Sosyal medya linklerini güncelle
+            if (celebrationData) {
+                updateSocialShareLinks(celebrationUrl, celebrationData.personName, getCelebrationTypeText(celebrationData.type));
+            } else {
+                // Eğer celebrationData yoksa state'ten al
+                const latestCelebration = state.celebrations[state.celebrations.length - 1];
+                if (latestCelebration) {
+                    updateSocialShareLinks(celebrationUrl, latestCelebration.personName, getCelebrationTypeText(latestCelebration.type));
+                }
+            }
             
             // Link kısaltma butonu
             shortenLinkBtn.onclick = () => createShortLink(celebrationUrl, celebrationId);
@@ -1402,8 +1423,12 @@
             // QR kodu güncelle
             generateQRCode(shortUrl);
             
-            // Sosyal medya linklerini güncelle
-            updateSocialShareLinks(shortUrl, state.currentCelebration.personName, getCelebrationTypeText(state.currentCelebration.type));
+            // Kutlama verilerini al
+            const celebration = state.celebrations.find(c => c.id === celebrationId);
+            if (celebration) {
+                // Sosyal medya linklerini güncelle
+                updateSocialShareLinks(shortUrl, celebration.personName, getCelebrationTypeText(celebration.type));
+            }
             
             // Kullanıcıya bilgi ver
             alert(`Link başarıyla kısaltıldı!\n\nKısa link: ${shortUrl}\n\nBu link tıklandığında orijinal kutlama sayfasına yönlendirecektir.`);
